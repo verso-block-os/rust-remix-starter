@@ -18,8 +18,8 @@ use tower_http::cors::CorsLayer;
 struct Todos {
     pool: Pool<Postgres>,
 }
-#[derive(Debug, FromRow, Clone, Deserialize, Serialize, Type)]
 
+#[derive(Debug, FromRow, Clone, Deserialize, Serialize, Type)]
 struct Todo {
     pub id: i32,
     pub title: String,
