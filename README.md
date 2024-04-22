@@ -1,4 +1,4 @@
-# Welcome to Remix + Vite!
+# Welcome to Rust Remix Starterkit!
 
 There are no docs. You're on your own kid.
 
