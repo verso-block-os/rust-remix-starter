@@ -1,0 +1,23 @@
+version: "3"
+
+services:
+  db:
+    image: postgres:14-alpine
+    environment:
+      POSTGRES_USER: database_user
+      POSTGRES_PASSWORD: somePassword
+      POSTGRES_DB: database
+    ports:
+      - 11111:5432
+    networks:
+      - app_network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "database_user", "-d", "database"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+networks:
+  app_network:
+    driver: bridge
