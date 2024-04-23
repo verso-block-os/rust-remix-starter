@@ -5,7 +5,6 @@ use axum::{
     },
     Router,
 };
-use database::todos::Todos;
 use std::{env, error::Error, sync::Arc};
 use tower::ServiceBuilder;
 use tower_http::{cors::CorsLayer, trace::TraceLayer};
@@ -26,10 +25,10 @@ async fn main() -> Result<(), Box<dyn Error>> {
         .allow_credentials(true);
 
     let pool = Arc::new(database::connect().await?);
-    let todos = Arc::new(Todos::new(pool));
+    let database = Arc::new(database::Database::new(pool));
 
     let router = router::get_router();
-    let rpc = rspc_axum::endpoint(router, move || router::Context { todos });
+    let rpc = rspc_axum::endpoint(router, move || router::Context { database });
 
     let app = Router::new()
         .nest("/rpc", rpc)

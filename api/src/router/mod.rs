@@ -1,10 +1,10 @@
 use std::sync::Arc;
 
-use crate::database::todos::Todos;
+use crate::database::Database;
 
 #[derive(Debug, Clone)]
 pub struct Context {
-    pub todos: Arc<Todos>,
+    pub database: Arc<Database>,
 }
 
 pub fn get_router() -> Arc<rspc::Router<Context>> {
@@ -12,28 +12,28 @@ pub fn get_router() -> Arc<rspc::Router<Context>> {
         .query("version", |t| t(|_ctx: Context, _: ()| "1.0.0"))
         .query("getTodos", |t| {
             t(|ctx: Context, _: ()| async move {
-                let todos = ctx.todos.get_all().await.unwrap();
+                let todos = ctx.database.todos.get_all().await.unwrap();
 
                 Ok(todos)
             })
         })
         .mutation("createTodo", |t| {
             t(|ctx: Context, title: String| async move {
-                let todo = ctx.todos.create(&title).await.unwrap();
+                let todo = ctx.database.todos.create(&title).await.unwrap();
 
                 Ok(todo)
             })
         })
         .mutation("toggleTodo", |t| {
             t(|ctx: Context, id: i32| async move {
-                let todo = ctx.todos.toggle(id).await.unwrap();
+                let todo = ctx.database.todos.toggle(id).await.unwrap();
 
                 Ok(todo)
             })
         })
         .mutation("deleteTodo", |t| {
             t(|ctx: Context, id: i32| async move {
-                ctx.todos.delete(id).await.unwrap();
+                ctx.database.todos.delete(id).await.unwrap();
 
                 Ok(())
             })

@@ -1,5 +1,5 @@
 use sqlx::{Pool, Postgres};
-use std::{env, error::Error};
+use std::{env, error::Error, sync::Arc};
 
 pub mod todos;
 
@@ -10,4 +10,17 @@ pub async fn connect() -> Result<Pool<Postgres>, Box<dyn Error>> {
     sqlx::migrate!("./migrations").run(&pool).await?;
 
     Ok(pool)
+}
+
+#[derive(Clone, Debug)]
+pub struct Database {
+    pub todos: todos::Todos,
+}
+
+impl Database {
+    pub fn new(pool: Arc<Pool<Postgres>>) -> Self {
+        let todos = todos::Todos::new(pool.clone());
+
+        Self { todos }
+    }
 }
