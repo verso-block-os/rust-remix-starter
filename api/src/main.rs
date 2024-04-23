@@ -6,7 +6,7 @@ use axum::{
     Router,
 };
 use database::todos::Todos;
-use std::{error::Error, sync::Arc};
+use std::{env, error::Error, sync::Arc};
 use tower::ServiceBuilder;
 use tower_http::{cors::CorsLayer, trace::TraceLayer};
 
@@ -17,9 +17,11 @@ mod router;
 async fn main() -> Result<(), Box<dyn Error>> {
     dotenv::dotenv().expect("Failed to read .env file");
 
+    let public_domain = env::var("PUBLIC_DOMAIN").unwrap();
+
     let cors = CorsLayer::new()
         .allow_methods([Method::GET, Method::POST, Method::OPTIONS])
-        .allow_origin("http://localtest.me:5173".parse::<HeaderValue>().unwrap())
+        .allow_origin(public_domain.parse::<HeaderValue>().unwrap())
         .allow_headers([AUTHORIZATION, CONTENT_TYPE])
         .allow_credentials(true);
 

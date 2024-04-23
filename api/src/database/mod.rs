@@ -1,6 +1,5 @@
-use std::{env, error::Error};
-
 use sqlx::{Pool, Postgres};
+use std::{env, error::Error};
 
 pub mod todos;
 

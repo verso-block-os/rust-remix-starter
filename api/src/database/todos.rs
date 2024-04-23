@@ -1,8 +1,7 @@
-use std::{error::Error, sync::Arc};
-
 use serde::{Deserialize, Serialize};
 use specta::Type;
 use sqlx::{prelude::FromRow, Pool, Postgres};
+use std::{error::Error, sync::Arc};
 
 #[derive(Clone, Debug)]
 pub struct Todos {
