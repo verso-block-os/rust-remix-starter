@@ -17,7 +17,7 @@ mod router;
 async fn main() -> Result<(), Box<dyn Error>> {
     dotenv::dotenv().expect("Failed to read .env file");
 
-    let public_domain = env::var("PUBLIC_DOMAIN").unwrap();
+    let public_domain = env::var("PUBLIC_DOMAIN").expect("PUBLIC_DOMAIN must be set");
 
     let cors = CorsLayer::new()
         .allow_methods([Method::GET, Method::POST, Method::OPTIONS])
