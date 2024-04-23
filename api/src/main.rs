@@ -12,9 +12,9 @@ use serde::{Deserialize, Serialize};
 use specta::Type;
 use sqlx::{prelude::FromRow, Pool, Postgres};
 use tower::ServiceBuilder;
-use tower_http::cors::CorsLayer;
+use tower_http::{cors::CorsLayer, trace::TraceLayer};
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 struct Todos {
     pool: Pool<Postgres>,
 }
@@ -68,6 +68,7 @@ impl Todos {
     }
 }
 
+#[derive(Debug, Clone)]
 struct Context {
     todos: Arc<Todos>,
 }
@@ -118,7 +119,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     let cors = CorsLayer::new()
         .allow_methods([Method::GET, Method::POST, Method::OPTIONS])
-        .allow_origin("http://localhost:5173".parse::<HeaderValue>().unwrap())
+        .allow_origin("http://localtest.me:5173".parse::<HeaderValue>().unwrap())
         .allow_headers([AUTHORIZATION, CONTENT_TYPE])
         .allow_credentials(true);
 
@@ -135,11 +136,16 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let app = Router::new()
         .nest("/rpc", rpc)
         .route("/", get(index))
-        .layer(ServiceBuilder::new().layer(cors));
+        .layer(ServiceBuilder::new().layer(cors))
+        .layer(TraceLayer::new_for_http());
 
     let listener = tokio::net::TcpListener::bind("0.0.0.0:1337").await.unwrap();
 
     println!("Listening on: {}", listener.local_addr().unwrap());
+
+    tracing_subscriber::fmt()
+        .with_max_level(tracing::Level::DEBUG)
+        .init();
 
     axum::serve(listener, app).await.unwrap();
 
