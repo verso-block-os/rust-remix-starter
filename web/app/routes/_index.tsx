@@ -13,7 +13,7 @@ export const meta: MetaFunction = () => {
 
 export const loader = async () => {
   const version = await api.query(["version"]);
-  const todos = await api.query(["getTodos"]);
+  const todos = await api.query(["todos.getTodos"]);
 
   return {
     version,
@@ -47,18 +47,18 @@ export default function Index() {
   const createTodo = async () => {
     if (!input) return;
 
-    const todo = await api.mutation(["createTodo", input]);
+    const todo = await api.mutation(["todos.createTodo", input]);
     setInput("");
     dispatch({ type: "add", payload: todo });
   };
 
   const toggleTodo = async (id: number) => {
-    const todo = await api.mutation(["toggleTodo", id]);
+    const todo = await api.mutation(["todos.toggleTodo", id]);
     dispatch({ type: "toggle", payload: todo.id });
   };
 
   const deleteTodo = async (id: number) => {
-    await api.mutation(["deleteTodo", id]);
+    await api.mutation(["todos.deleteTodo", id]);
     dispatch({ type: "remove", payload: id });
   };
 
@@ -67,7 +67,7 @@ export default function Index() {
       <div className="flex flex-col gap-4">
         <h1 className="text-xl font-bold">Welcome to Rust Remix Starter {data.version}</h1>
         <div className="flex gap-4">
-          <Input type="text" placeholder="Add a todo" onChange={(e) => setInput(e.target.value)} />
+          <Input type="text" placeholder="Add a todo" onChange={(e) => setInput(e.target.value)} value={input} />
           <Button onClick={createTodo} size="icon">
             <Plus />
           </Button>
@@ -88,6 +88,14 @@ export default function Index() {
             </Button>
           </div>
         ))}
+        <Button
+          onClick={() => {
+            // api.mutation(["auth.login", { email: "test", password: "test" }]);
+            api.query(["auth.logout"]);
+          }}
+        >
+          Testing
+        </Button>
       </div>
     </div>
   );

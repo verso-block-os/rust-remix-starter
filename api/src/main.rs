@@ -7,10 +7,12 @@ use axum::{
 };
 use std::{env, error::Error, sync::Arc};
 use tower::ServiceBuilder;
+use tower_cookies::CookieManagerLayer;
+use tower_cookies::Cookies;
 use tower_http::{cors::CorsLayer, trace::TraceLayer};
 
-mod database;
 mod router;
+mod service;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
@@ -24,15 +26,19 @@ async fn main() -> Result<(), Box<dyn Error>> {
         .allow_headers([AUTHORIZATION, CONTENT_TYPE])
         .allow_credentials(true);
 
-    let pool = Arc::new(database::connect().await?);
-    let database = Arc::new(database::Database::new(pool));
+    let pool = Arc::new(service::connect().await?);
+    let service = Arc::new(service::Service::new(pool));
 
     let router = router::get_router();
-    let rpc = rspc_axum::endpoint(router, move || router::Context { database });
+    let rpc = rspc_axum::endpoint(router, move |cookies: Cookies| router::Context {
+        service,
+        cookies,
+    });
 
     let app = Router::new()
         .nest("/rpc", rpc)
         .layer(ServiceBuilder::new().layer(cors))
+        .layer(CookieManagerLayer::new())
         .layer(TraceLayer::new_for_http());
 
     let listener = tokio::net::TcpListener::bind("0.0.0.0:1337").await.unwrap();
