@@ -1,9 +1,21 @@
-import stylesheet from "@/index.css?url";
+import {
+  Links,
+  Meta,
+  Outlet,
+  Scripts,
+  ScrollRestoration,
+  useLoaderData,
+} from "@remix-run/react";
 import { LinksFunction, LoaderFunctionArgs } from "@remix-run/node";
-import { Links, Meta, Outlet, Scripts, ScrollRestoration, useLoaderData } from "@remix-run/react";
-import clsx from "clsx";
-import { PreventFlashOnWrongTheme, ThemeProvider, useTheme } from "remix-themes";
+import {
+  PreventFlashOnWrongTheme,
+  ThemeProvider,
+  useTheme,
+} from "remix-themes";
+
 import { Toaster } from "./components/ui/sonner";
+import clsx from "clsx";
+import stylesheet from "@/index.css?url";
 import { themeSessionResolver } from "./sessions.server";
 
 export async function loader({ request }: LoaderFunctionArgs) {
@@ -13,7 +25,9 @@ export async function loader({ request }: LoaderFunctionArgs) {
   };
 }
 
-export const links: LinksFunction = () => [{ rel: "stylesheet", href: stylesheet }];
+export const links: LinksFunction = () => [
+  { rel: "stylesheet", href: stylesheet },
+];
 
 export function App({ children }: { children: React.ReactNode }) {
   const data = useLoaderData<typeof loader>();
@@ -27,7 +41,7 @@ export function App({ children }: { children: React.ReactNode }) {
         <PreventFlashOnWrongTheme ssrTheme={Boolean(data.theme)} />
         <Links />
       </head>
-      <body className="min-h-full flex flex-col">
+      <body className={clsx("min-h-full flex flex-col")}>
         {children}
         <ScrollRestoration />
         <Scripts />

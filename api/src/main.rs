@@ -41,7 +41,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
         .layer(CookieManagerLayer::new())
         .layer(TraceLayer::new_for_http());
 
-    let listener = tokio::net::TcpListener::bind("0.0.0.0:1337").await.unwrap();
+    let listener = tokio::net::TcpListener::bind("::1:1337").await.unwrap();
 
     println!("Listening on: {}", listener.local_addr().unwrap());
 

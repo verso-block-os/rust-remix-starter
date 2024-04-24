@@ -1,19 +1,30 @@
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import { Link, MetaFunction } from "@remix-run/react";
+import { RiArrowRightLine, RiDiscordFill } from "react-icons/ri";
+
 import { Button } from "@/components/ui/button";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { Loader2 } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { api } from "@/lib/api";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { Link, MetaFunction } from "@remix-run/react";
-import { Loader2 } from "lucide-react";
-import { useState } from "react";
-import { useForm } from "react-hook-form";
-import { RiArrowRightLine, RiDiscordFill } from "react-icons/ri";
 import { toast } from "sonner";
+import { useForm } from "react-hook-form";
+import { useState } from "react";
 import { z } from "zod";
+import { zodResolver } from "@hookform/resolvers/zod";
 
 export const meta: MetaFunction = () => {
-  return [{ title: "Register - Rust Remix Starter" }, { name: "description", content: "Welcome to Rust Remix Starter!" }];
+  return [
+    { title: "Register - Rust Remix Starter" },
+    { name: "description", content: "Welcome to Rust Remix Starter!" },
+  ];
 };
 
 const schema = z
@@ -49,7 +60,8 @@ export default function Register() {
   const onSubmit = (data: z.infer<typeof schema>) => {
     setLoading(true);
     const loadingId = toast.loading("Registering...", {
-      description: "Please hold on while our specialized team of space rabbits create your account",
+      description:
+        "Please hold on while our specialized team of space rabbits create your account",
     });
 
     api
@@ -78,8 +90,12 @@ export default function Register() {
       >
         <div className="rounded-md p-8 flex flex-col items-center bg-background border-b border-solid">
           <img className="h-8 mb-8" src="/logo.svg" alt="my logo" />
-          <h1 className="font-semibold mb-2">Register for Rust Remix Starter</h1>
-          <p className="text-muted-foreground text-sm mb-8">Hello! Please register to continue</p>
+          <h1 className="font-semibold mb-2">
+            Register for Rust Remix Starter
+          </h1>
+          <p className="text-muted-foreground text-sm mb-8">
+            Hello! Please register to continue
+          </p>
           <div className="flex gap-2 w-full mb-4">
             <Button variant="outline" className="h-8 flex-1 gap-4" size="sm">
               <RiDiscordFill />
@@ -127,7 +143,7 @@ export default function Register() {
             render={({ field }) => (
               <FormItem className="w-full mb-8 text-muted-foreground">
                 <div className="flex justify-between items-center gap-4">
-                  <FormLabel>Password</FormLabel>
+                  <FormLabel>Confirm Password</FormLabel>
                   <FormMessage className="text-xs opacity-80 font-normal text-right" />
                 </div>
                 <FormControl>
@@ -136,9 +152,18 @@ export default function Register() {
               </FormItem>
             )}
           />
-          <Button type="submit" className="h-8 w-full gap-2" size="sm" disabled={loading}>
+          <Button
+            type="submit"
+            className="h-8 w-full gap-2"
+            size="sm"
+            disabled={loading}
+          >
             <span>Continue</span>
-            {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <RiArrowRightLine />}
+            {loading ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <RiArrowRightLine />
+            )}
           </Button>
         </div>
         <div className="p-4 text-center text-sm">
