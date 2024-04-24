@@ -1,6 +1,7 @@
 import stylesheet from "@/index.css?url";
 import { LinksFunction } from "@remix-run/node";
 import { Links, Meta, Outlet, Scripts, ScrollRestoration } from "@remix-run/react";
+import { Toaster } from "./components/ui/sonner";
 
 export const links: LinksFunction = () => [{ rel: "stylesheet", href: stylesheet }];
 
@@ -17,6 +18,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
         {children}
         <ScrollRestoration />
         <Scripts />
+        <Toaster position="bottom-center" />
       </body>
     </html>
   );
