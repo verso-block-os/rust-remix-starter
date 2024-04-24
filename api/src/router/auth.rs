@@ -106,7 +106,7 @@ pub fn mount() -> rspc::RouterBuilder<Context> {
                     .users
                     .create_user(email.as_str(), password.as_str())
                     .await
-                    .map_err(|e| {
+                    .map_err(|_| {
                         rspc::Error::new(
                             rspc::ErrorCode::BadRequest,
                             "Error creating user".to_string(),
