@@ -1,3 +1,4 @@
+import { ModeToggle } from "@/components/mode-toggle";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Todo } from "@/generated/bindings";
@@ -6,6 +7,7 @@ import type { MetaFunction } from "@remix-run/node";
 import { useLoaderData } from "@remix-run/react";
 import { Plus, X } from "lucide-react";
 import { useReducer, useState } from "react";
+import { RiLogoutBoxLine } from "react-icons/ri";
 
 export const meta: MetaFunction = () => {
   return [{ title: "Rust Remix Starter" }, { name: "description", content: "Welcome to Rust Remix Starter!" }];
@@ -63,14 +65,17 @@ export default function Index() {
   };
 
   return (
-    <div className="flex-1 flex justify-center items-center">
+    <div className="flex-1 flex justify-center items-center relative">
       <div className="flex flex-col gap-4">
         <h1 className="text-xl font-bold">Welcome to Rust Remix Starter {data.version}</h1>
         <div className="flex gap-4">
           <Input type="text" placeholder="Add a todo" onChange={(e) => setInput(e.target.value)} value={input} />
-          <Button onClick={createTodo} size="icon">
-            <Plus />
-          </Button>
+          <div className="flex gap-4">
+            <Button onClick={createTodo} size="icon">
+              <Plus />
+            </Button>
+            <ModeToggle />
+          </div>
         </div>
         {todos.map((todo) => (
           <div key={todo.id} className="flex items-center justify-between gap-4 p-4 bg-slate-50 rounded-sm">
@@ -89,12 +94,13 @@ export default function Index() {
           </div>
         ))}
         <Button
+          className="gap-2"
           onClick={() => {
             // api.mutation(["auth.login", { email: "test", password: "test" }]);
             api.query(["auth.logout"]);
           }}
         >
-          Testing
+          Logout <RiLogoutBoxLine />
         </Button>
       </div>
     </div>

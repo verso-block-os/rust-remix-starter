@@ -1,20 +1,33 @@
 import stylesheet from "@/index.css?url";
-import { LinksFunction } from "@remix-run/node";
-import { Links, Meta, Outlet, Scripts, ScrollRestoration } from "@remix-run/react";
+import { LinksFunction, LoaderFunctionArgs } from "@remix-run/node";
+import { Links, Meta, Outlet, Scripts, ScrollRestoration, useLoaderData } from "@remix-run/react";
+import clsx from "clsx";
+import { PreventFlashOnWrongTheme, ThemeProvider, useTheme } from "remix-themes";
 import { Toaster } from "./components/ui/sonner";
+import { themeSessionResolver } from "./sessions.server";
+
+export async function loader({ request }: LoaderFunctionArgs) {
+  const { getTheme } = await themeSessionResolver(request);
+  return {
+    theme: getTheme(),
+  };
+}
 
 export const links: LinksFunction = () => [{ rel: "stylesheet", href: stylesheet }];
 
-export function Layout({ children }: { children: React.ReactNode }) {
+export function App({ children }: { children: React.ReactNode }) {
+  const data = useLoaderData<typeof loader>();
+  const [theme] = useTheme();
   return (
-    <html lang="en">
+    <html lang="en" className={clsx(theme, "absolute inset-0")}>
       <head>
         <meta charSet="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <Meta />
+        <PreventFlashOnWrongTheme ssrTheme={Boolean(data.theme)} />
         <Links />
       </head>
-      <body className="absolute inset-0 flex flex-col">
+      <body className="min-h-full flex flex-col">
         {children}
         <ScrollRestoration />
         <Scripts />
@@ -24,6 +37,13 @@ export function Layout({ children }: { children: React.ReactNode }) {
   );
 }
 
-export default function App() {
-  return <Outlet />;
+export default function AppWithProviders() {
+  const data = useLoaderData<typeof loader>();
+  return (
+    <ThemeProvider specifiedTheme={data.theme} themeAction="/action/set-theme">
+      <App>
+        <Outlet />
+      </App>
+    </ThemeProvider>
+  );
 }
