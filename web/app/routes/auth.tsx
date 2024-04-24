@@ -1,4 +1,17 @@
+import { getSession } from "@/lib/get-session";
+import { LoaderFunction, redirect } from "@remix-run/node";
 import { Outlet } from "@remix-run/react";
+
+export const loader: LoaderFunction = async ({ request }) => {
+  const cookies = request.headers.get("Cookie");
+  const session = await getSession(cookies);
+
+  if (session) {
+    throw redirect("/");
+  }
+
+  return null;
+};
 
 export default function Auth() {
   return (

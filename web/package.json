@@ -21,6 +21,7 @@
     "@rspc/client": "^0.2.0",
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.1.0",
+    "cookie": "^0.6.0",
     "isbot": "^4.1.0",
     "lucide-react": "^0.372.0",
     "next-themes": "^0.3.0",
