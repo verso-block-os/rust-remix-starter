@@ -106,7 +106,12 @@ pub fn mount() -> rspc::RouterBuilder<Context> {
                     .users
                     .create_user(email.as_str(), password.as_str())
                     .await
-                    .map_err(|e| rspc::Error::new(rspc::ErrorCode::BadRequest, e.to_string()))?;
+                    .map_err(|e| {
+                        rspc::Error::new(
+                            rspc::ErrorCode::BadRequest,
+                            "Error creating user".to_string(),
+                        )
+                    })?;
 
                 let session = ctx
                     .service
