@@ -1,19 +1,30 @@
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import { Link, MetaFunction, useNavigate } from "@remix-run/react";
+import { RiArrowRightLine, RiDiscordFill } from "react-icons/ri";
+
 import { Button } from "@/components/ui/button";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { Loader2 } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { api } from "@/lib/api";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { Link, MetaFunction } from "@remix-run/react";
-import { Loader2 } from "lucide-react";
-import { useState } from "react";
-import { useForm } from "react-hook-form";
-import { RiArrowRightLine, RiDiscordFill } from "react-icons/ri";
 import { toast } from "sonner";
+import { useForm } from "react-hook-form";
+import { useState } from "react";
 import { z } from "zod";
+import { zodResolver } from "@hookform/resolvers/zod";
 
 export const meta: MetaFunction = () => {
-  return [{ title: "Login - Rust Remix Starter" }, { name: "description", content: "Welcome to Rust Remix Starter!" }];
+  return [
+    { title: "Login - Rust Remix Starter" },
+    { name: "description", content: "Welcome to Rust Remix Starter!" },
+  ];
 };
 
 const schema = z.object({
@@ -24,6 +35,7 @@ const schema = z.object({
 });
 
 export default function Login() {
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const form = useForm<z.infer<typeof schema>>({
     resolver: zodResolver(schema),
@@ -36,7 +48,8 @@ export default function Login() {
   const onSubmit = (data: z.infer<typeof schema>) => {
     setLoading(true);
     const loadingId = toast.loading("Logging in...", {
-      description: "Please hold on while our specialized team of space rabbits verify your credentials",
+      description:
+        "Please hold on while our specialized team of space rabbits verify your credentials",
     });
 
     api
@@ -45,6 +58,7 @@ export default function Login() {
         toast.success("Logged in successfully", {
           description: "We will redirect you to where you left off",
         });
+        navigate(".", { replace: true });
       })
       .catch((e) => {
         toast.error("Failed to login", {
@@ -64,9 +78,13 @@ export default function Login() {
         onSubmit={form.handleSubmit(onSubmit)}
       >
         <div className="rounded-md p-8 flex flex-col items-center bg-background border-b border-solid">
-          <img className="h-8 mb-8" src="/logo.svg" alt="my logo" />
+          <Link to="/">
+            <img className="h-8 mb-8" src="/logo.svg" alt="my logo" />
+          </Link>
           <h1 className="font-semibold mb-2">Login to Rust Remix Starter</h1>
-          <p className="text-muted-foreground text-sm mb-8">Welcome back! Please login to continue</p>
+          <p className="text-muted-foreground text-sm mb-8">
+            Welcome back! Please login to continue
+          </p>
           <div className="flex gap-2 w-full mb-4">
             <Button variant="outline" className="h-8 flex-1 gap-4" size="sm">
               <RiDiscordFill />
@@ -108,13 +126,24 @@ export default function Login() {
               </FormItem>
             )}
           />
-          <Button type="submit" className="h-8 w-full gap-2" size="sm" disabled={loading}>
+          <Button
+            type="submit"
+            className="h-8 w-full gap-2"
+            size="sm"
+            disabled={loading}
+          >
             <span>Continue</span>
-            {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <RiArrowRightLine />}
+            {loading ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <RiArrowRightLine />
+            )}
           </Button>
         </div>
         <div className="p-4 text-center text-sm">
-          <span className="text-muted-foreground/80">Don't have an account? </span>
+          <span className="text-muted-foreground/80">
+            Don't have an account?{" "}
+          </span>
           <Link to="/auth/register">Register</Link>
         </div>
       </form>

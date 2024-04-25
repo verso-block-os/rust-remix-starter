@@ -6,7 +6,7 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { Link, MetaFunction } from "@remix-run/react";
+import { Link, MetaFunction, useNavigate } from "@remix-run/react";
 import { RiArrowRightLine, RiDiscordFill } from "react-icons/ri";
 
 import { Button } from "@/components/ui/button";
@@ -48,6 +48,7 @@ const schema = z
   });
 
 export default function Register() {
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const form = useForm<z.infer<typeof schema>>({
     resolver: zodResolver(schema),
@@ -70,6 +71,7 @@ export default function Register() {
         toast.success("Registered in successfully", {
           description: "We will redirect you to where you left off",
         });
+        navigate(".", { replace: true });
       })
       .catch((e) => {
         toast.error("Failed to register", {
@@ -89,7 +91,9 @@ export default function Register() {
         onSubmit={form.handleSubmit(onSubmit)}
       >
         <div className="rounded-md p-8 flex flex-col items-center bg-background border-b border-solid">
-          <img className="h-8 mb-8" src="/logo.svg" alt="my logo" />
+          <Link to="/">
+            <img className="h-8 mb-8" src="/logo.svg" alt="my logo" />
+          </Link>
           <h1 className="font-semibold mb-2">
             Register for Rust Remix Starter
           </h1>

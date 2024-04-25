@@ -20,7 +20,6 @@ export const meta: MetaFunction = () => {
 export const loader = async () => {
   const version = await api.query(["version"]);
   const todos = await api.query(["todos.getTodos"]);
-
   return {
     version,
     todos,
