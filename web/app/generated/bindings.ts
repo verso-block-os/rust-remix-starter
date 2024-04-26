@@ -3,7 +3,7 @@
 export type Procedures = {
     queries: 
         { key: "auth.logout", input: never, result: null } | 
-        { key: "auth.verify", input: string, result: { id: number; email: string } } | 
+        { key: "auth.verify", input: string, result: VerifiedUser } | 
         { key: "todos.getTodos", input: never, result: Todo[] } | 
         { key: "version", input: never, result: string },
     mutations: 
@@ -18,3 +18,5 @@ export type Procedures = {
 export type AuthArgs = { email: string; password: string }
 
 export type Todo = { id: number; title: string; completed: boolean }
+
+export type VerifiedUser = { id: number; email: string }
