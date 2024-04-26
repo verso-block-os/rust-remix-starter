@@ -5,13 +5,14 @@ use specta::{selection, Type};
 
 use crate::{
     core::context::{query, Context},
+    middleware,
     service::{
         auth::{Auth, Session},
         users::Users,
     },
 };
 
-use super::{auth, cookies, R};
+use super::R;
 
 #[derive(Debug, Clone, Deserialize, Serialize, Type)]
 struct AuthArgs {
@@ -49,7 +50,7 @@ pub fn mount() -> Router<Context> {
         )
         .procedure(
             "login",
-            R.with(cookies())
+            R.with(middleware::cookies())
                 .mutation(|ctx, args: AuthArgs| async move {
                     let AuthArgs { email, password } = args;
                     let (auth, users, cookies) = query!(ctx, Auth, Users, CookieJar);
@@ -97,7 +98,7 @@ pub fn mount() -> Router<Context> {
         )
         .procedure(
             "register",
-            R.with(cookies())
+            R.with(middleware::cookies())
                 .mutation(|ctx, args: AuthArgs| async move {
                     let AuthArgs { email, password } = args;
                     let (auth, users, cookies) = query!(ctx, Auth, Users, CookieJar);
@@ -140,8 +141,8 @@ pub fn mount() -> Router<Context> {
         )
         .procedure(
             "logout",
-            R.with(cookies())
-                .with(auth())
+            R.with(middleware::cookies())
+                .with(middleware::auth())
                 .mutation(|ctx, _: ()| async move {
                     let (cookies, auth, session) = query!(ctx, CookieJar, Auth, Session);
 

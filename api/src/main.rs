@@ -17,6 +17,7 @@ use std::{
 use tower_http::cors::CorsLayer;
 
 mod core;
+mod middleware;
 mod router;
 mod service;
 
