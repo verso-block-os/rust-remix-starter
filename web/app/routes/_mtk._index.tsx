@@ -92,7 +92,7 @@ export default function Index() {
         <Button
           className="gap-2"
           onClick={() => {
-            api.mutation(["auth.logout"]);
+            api.query(["auth.logout"]);
           }}
         >
           Logout <RiLogoutBoxLine />

@@ -143,16 +143,20 @@ pub fn mount() -> Router<Context> {
             "logout",
             R.with(middleware::cookies())
                 .with(middleware::auth())
-                .mutation(|ctx, _: ()| async move {
+                .query(|ctx, _: ()| async move {
                     let (cookies, auth, session) = query!(ctx, CookieJar, Auth, Session);
 
                     auth.invalidate_session(&session.token).await.map_err(|e| {
                         rspc::Error::new(rspc::ErrorCode::BadRequest, e.to_string())
                     })?;
 
-                    if let Some(cookie) = cookies.get("auth_session") {
-                        cookies.remove(cookie)
-                    }
+                    let mut cookie = Cookie::new("auth_session", "");
+
+                    cookie.set_http_only(true);
+                    cookie.set_domain("localtest.me");
+                    cookie.set_path("/");
+
+                    cookies.remove(cookie);
 
                     Ok(())
                 }),
