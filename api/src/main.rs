@@ -5,12 +5,18 @@ use axum::{
     },
     Router,
 };
-use std::{env, error::Error, sync::Arc};
-use tower::ServiceBuilder;
-use tower_cookies::CookieManagerLayer;
-use tower_cookies::Cookies;
-use tower_http::{cors::CorsLayer, trace::TraceLayer};
 
+use core::context::{self, Context};
+use rspc::integrations::httpz::Request;
+use std::{
+    env,
+    error::Error,
+    net::{Ipv6Addr, SocketAddr},
+    sync::{Arc, Mutex},
+};
+use tower_http::cors::CorsLayer;
+
+mod core;
 mod router;
 mod service;
 
@@ -18,7 +24,22 @@ mod service;
 async fn main() -> Result<(), Box<dyn Error>> {
     dotenv::dotenv().expect("Failed to read .env file");
 
+    let database_url = env::var("DATABASE_URL").expect("DATABASE_URL must be set");
     let public_domain = env::var("PUBLIC_DOMAIN").expect("PUBLIC_DOMAIN must be set");
+
+    let pool = sqlx::postgres::PgPool::connect(&database_url).await?;
+
+    sqlx::migrate!("./migrations").run(&pool).await?;
+
+    let addr = SocketAddr::from((Ipv6Addr::UNSPECIFIED, 4000));
+
+    let pool = Arc::new(pool);
+
+    let auth = service::auth::Auth::new(pool.clone());
+    let users = service::users::Users::new(pool.clone());
+    let todos = service::todos::Todos::new(pool.clone());
+
+    let router = router::get();
 
     let cors = CorsLayer::new()
         .allow_methods([Method::GET, Method::POST, Method::OPTIONS])
@@ -26,30 +47,29 @@ async fn main() -> Result<(), Box<dyn Error>> {
         .allow_headers([AUTHORIZATION, CONTENT_TYPE])
         .allow_credentials(true);
 
-    let pool = Arc::new(service::connect().await?);
-    let service = Arc::new(service::Service::new(pool));
-
-    let router = router::get_router();
-    let rpc = rspc_axum::endpoint(router, move |cookies: Cookies| router::Context {
-        service,
-        cookies,
-    });
-
     let app = Router::new()
-        .nest("/rpc", rpc)
-        .layer(ServiceBuilder::new().layer(cors))
-        .layer(CookieManagerLayer::new())
-        .layer(TraceLayer::new_for_http());
-
-    let listener = tokio::net::TcpListener::bind("::1:1337").await.unwrap();
-
-    println!("Listening on: {}", listener.local_addr().unwrap());
+        .nest(
+            "/",
+            router
+                .endpoint(|req: Request| {
+                    let mut ctx = Context::new();
+                    context::add!(ctx, Mutex::new(req));
+                    context::add!(ctx, auth);
+                    context::add!(ctx, users);
+                    context::add!(ctx, todos);
+                    ctx
+                })
+                .axum(),
+        )
+        .layer(cors);
 
     tracing_subscriber::fmt()
         .with_max_level(tracing::Level::DEBUG)
         .init();
 
-    axum::serve(listener, app).await.unwrap();
+    axum::Server::bind(&addr)
+        .serve(app.into_make_service())
+        .await?;
 
     Ok(())
 }

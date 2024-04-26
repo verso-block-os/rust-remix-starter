@@ -1,9 +1,17 @@
-use rspc::selection;
+use cookie::Cookie;
+use rspc::{integrations::httpz::CookieJar, Router};
 use serde::{Deserialize, Serialize};
-use specta::Type;
-use tower_cookies::Cookie;
+use specta::{selection, Type};
 
-use super::{Context, ProtectedContext};
+use crate::{
+    core::context::{query, Context},
+    service::{
+        auth::{Auth, Session},
+        users::Users,
+    },
+};
+
+use super::{auth, cookies, R};
 
 #[derive(Debug, Clone, Deserialize, Serialize, Type)]
 struct AuthArgs {
@@ -11,13 +19,13 @@ struct AuthArgs {
     password: String,
 }
 
-pub fn mount() -> rspc::RouterBuilder<Context> {
-    rspc::Router::<Context>::new()
-        .query("verify", |t| {
-            t(|ctx: Context, token: String| async move {
-                let session = ctx
-                    .service
-                    .auth
+pub fn mount() -> Router<Context> {
+    R.router()
+        .procedure(
+            "verify",
+            R.query(|ctx, token: String| async move {
+                let (auth, users) = query!(ctx, Auth, Users);
+                let session = auth
                     .validate_session(token.as_str())
                     .await
                     .map_err(|e| rspc::Error::new(rspc::ErrorCode::BadRequest, e.to_string()))?
@@ -25,9 +33,7 @@ pub fn mount() -> rspc::RouterBuilder<Context> {
                         rspc::Error::new(rspc::ErrorCode::BadRequest, "Invalid session".to_string())
                     })?;
 
-                let user = ctx
-                    .service
-                    .users
+                let user = users
                     .get_user_by_id(session.user_id)
                     .await
                     .map_err(|e| rspc::Error::new(rspc::ErrorCode::BadRequest, e.to_string()))?
@@ -39,118 +45,115 @@ pub fn mount() -> rspc::RouterBuilder<Context> {
                     id,
                     email
                 }))
-            })
-        })
-        .mutation("login", |t| {
-            t(|ctx: Context, args: AuthArgs| async move {
-                let AuthArgs { email, password } = args;
+            }),
+        )
+        .procedure(
+            "login",
+            R.with(cookies())
+                .mutation(|ctx, args: AuthArgs| async move {
+                    let AuthArgs { email, password } = args;
+                    let (auth, users, cookies) = query!(ctx, Auth, Users, CookieJar);
 
-                let user = ctx
-                    .service
-                    .users
-                    .get_user_by_email(email.as_str())
+                    let user = users
+                        .get_user_by_email(email.as_str())
+                        .await
+                        .map_err(|e| rspc::Error::new(rspc::ErrorCode::BadRequest, e.to_string()))?
+                        .ok_or_else(|| {
+                            rspc::Error::new(
+                                rspc::ErrorCode::BadRequest,
+                                "User not found".to_string(),
+                            )
+                        })?;
+
+                    let valid = tokio::task::spawn_blocking(move || {
+                        bcrypt::verify(password, &user.password).unwrap_or(false)
+                    })
                     .await
-                    .map_err(|e| rspc::Error::new(rspc::ErrorCode::BadRequest, e.to_string()))?
-                    .ok_or_else(|| {
-                        rspc::Error::new(rspc::ErrorCode::BadRequest, "User not found".to_string())
+                    .map_err(|e| {
+                        rspc::Error::new(rspc::ErrorCode::InternalServerError, e.to_string())
                     })?;
 
-                let valid = tokio::task::spawn_blocking(move || {
-                    bcrypt::verify(password, &user.password).unwrap_or(false)
-                })
-                .await
-                .map_err(|e| {
-                    rspc::Error::new(rspc::ErrorCode::InternalServerError, e.to_string())
-                })?;
-
-                if !valid {
-                    return Err(rspc::Error::new(
-                        rspc::ErrorCode::BadRequest,
-                        "Invalid password".to_string(),
-                    ));
-                }
-
-                let session = ctx
-                    .service
-                    .auth
-                    .create_session(user.id)
-                    .await
-                    .map_err(|e| rspc::Error::new(rspc::ErrorCode::BadRequest, e.to_string()))?;
-
-                let mut cookie = Cookie::new("auth_session", session);
-
-                cookie.set_http_only(true);
-                cookie.set_domain("localtest.me");
-                cookie.set_path("/");
-
-                ctx.cookies.add(cookie);
-
-                Ok(())
-            })
-        })
-        .mutation("register", |t| {
-            t(|ctx: Context, args: AuthArgs| async move {
-                let AuthArgs { email, password } = args;
-
-                let password = tokio::task::spawn_blocking(move || {
-                    bcrypt::hash(password, bcrypt::DEFAULT_COST)
-                })
-                .await
-                .map_err(|e| rspc::Error::new(rspc::ErrorCode::InternalServerError, e.to_string()))?
-                .map_err(|e| {
-                    rspc::Error::new(rspc::ErrorCode::InternalServerError, e.to_string())
-                })?;
-
-                let user = ctx
-                    .service
-                    .users
-                    .create_user(email.as_str(), password.as_str())
-                    .await
-                    .map_err(|_| {
-                        rspc::Error::new(
+                    if !valid {
+                        return Err(rspc::Error::new(
                             rspc::ErrorCode::BadRequest,
-                            "Error creating user".to_string(),
-                        )
+                            "Invalid email or password".to_string(),
+                        ));
+                    }
+
+                    let session = auth.create_session(user.id).await.map_err(|e| {
+                        rspc::Error::new(rspc::ErrorCode::BadRequest, e.to_string())
                     })?;
 
-                let session = ctx
-                    .service
-                    .auth
-                    .create_session(user.id)
+                    let mut cookie = Cookie::new("auth_session", session);
+
+                    cookie.set_http_only(true);
+                    cookie.set_domain("localtest.me");
+                    cookie.set_path("/");
+
+                    cookies.add(cookie);
+
+                    Ok(())
+                }),
+        )
+        .procedure(
+            "register",
+            R.with(cookies())
+                .mutation(|ctx, args: AuthArgs| async move {
+                    let AuthArgs { email, password } = args;
+                    let (auth, users, cookies) = query!(ctx, Auth, Users, CookieJar);
+
+                    let password = tokio::task::spawn_blocking(move || {
+                        bcrypt::hash(password, bcrypt::DEFAULT_COST)
+                    })
                     .await
-                    .map_err(|e| rspc::Error::new(rspc::ErrorCode::BadRequest, e.to_string()))?;
+                    .map_err(|e| {
+                        rspc::Error::new(rspc::ErrorCode::InternalServerError, e.to_string())
+                    })?
+                    .map_err(|e| {
+                        rspc::Error::new(rspc::ErrorCode::InternalServerError, e.to_string())
+                    })?;
 
-                let mut cookie = Cookie::new("auth_session", session);
+                    let user = users
+                        .create_user(email.as_str(), password.as_str())
+                        .await
+                        .map_err(|_| {
+                            rspc::Error::new(
+                                rspc::ErrorCode::BadRequest,
+                                "Error creating user".to_string(),
+                            )
+                        })?;
 
-                cookie.set_http_only(true);
-                cookie.set_domain("localtest.me");
-                cookie.set_path("/");
+                    let session = auth.create_session(user.id).await.map_err(|e| {
+                        rspc::Error::new(rspc::ErrorCode::BadRequest, e.to_string())
+                    })?;
 
-                ctx.cookies.add(cookie);
+                    let mut cookie = Cookie::new("auth_session", session);
 
-                Ok(())
-            })
-        })
-}
+                    cookie.set_http_only(true);
+                    cookie.set_domain("localtest.me");
+                    cookie.set_path("/");
 
-pub fn mount_protected() -> rspc::RouterBuilder<ProtectedContext> {
-    rspc::Router::<ProtectedContext>::new().query("logout", |t| {
-        t(|ctx: ProtectedContext, _: ()| async move {
-            ctx.service
-                .auth
-                .invalidate_session(&ctx.session_token)
-                .await
-                .map_err(|e| rspc::Error::new(rspc::ErrorCode::BadRequest, e.to_string()))?;
+                    cookies.add(cookie);
 
-            let mut cookie = Cookie::from("auth_session");
+                    Ok(())
+                }),
+        )
+        .procedure(
+            "logout",
+            R.with(cookies())
+                .with(auth())
+                .mutation(|ctx, _: ()| async move {
+                    let (cookies, auth, session) = query!(ctx, CookieJar, Auth, Session);
 
-            cookie.set_http_only(true);
-            cookie.set_domain("localtest.me");
-            cookie.set_path("/");
+                    auth.invalidate_session(&session.token).await.map_err(|e| {
+                        rspc::Error::new(rspc::ErrorCode::BadRequest, e.to_string())
+                    })?;
 
-            ctx.cookies.remove(cookie);
+                    if let Some(cookie) = cookies.get("auth_session") {
+                        cookies.remove(cookie)
+                    }
 
-            Ok(())
-        })
-    })
+                    Ok(())
+                }),
+        )
 }

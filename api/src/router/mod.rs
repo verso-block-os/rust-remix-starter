@@ -1,57 +1,77 @@
-use std::sync::Arc;
+use std::{
+    path::PathBuf,
+    sync::{Arc, Mutex},
+};
 
-use tower_cookies::Cookies;
+use rspc::{
+    integrations::httpz::{CookieJar, Request},
+    BuiltRouter, ExportConfig, Rspc,
+};
 
-use crate::service::Service;
+use crate::{
+    core::context::{self, Context},
+    service::auth::Auth,
+};
 
 mod auth;
 mod todos;
 
-#[derive(Debug, Clone)]
-pub struct Context {
-    pub service: Arc<Service>,
-    pub cookies: Cookies,
+pub fn cookies() -> context::middleware!() {
+    |mw, mut ctx| async move {
+        let request = context::query!(ctx, Mutex<Request>);
+        let mut request = request.lock().unwrap();
+        let cookies = request.cookies().ok_or_else(|| {
+            rspc::Error::new(
+                rspc::ErrorCode::InternalServerError,
+                "Failed to find cookies in the request.".to_string(),
+            )
+        })?;
+
+        context::add!(ctx, cookies);
+
+        Ok(mw.next(ctx))
+    }
 }
 
-pub struct ProtectedContext {
-    pub service: Arc<Service>,
-    pub cookies: Cookies,
-    pub user_id: i32,
-    pub session_token: String,
+pub fn auth() -> context::middleware!() {
+    |mw, mut ctx| async move {
+        let (cookies, auth) = context::query!(ctx, CookieJar, Auth);
+        let cookie = cookies.get("auth_session").ok_or_else(|| {
+            rspc::Error::new(rspc::ErrorCode::BadRequest, "Not authenticated".to_string())
+        })?;
+
+        let session = auth
+            .validate_session(cookie.value())
+            .await
+            .map_err(|e| rspc::Error::new(rspc::ErrorCode::BadRequest, e.to_string()))?
+            .ok_or_else(|| {
+                rspc::Error::new(rspc::ErrorCode::BadRequest, "Invalid session".to_string())
+            })?;
+
+        context::add!(ctx, session);
+
+        Ok(mw.next(ctx))
+    }
 }
 
-pub fn get_router() -> Arc<rspc::Router<Context>> {
-    rspc::Router::<Context>::new()
-        .query("version", |t| t(|_ctx: Context, _: ()| "1.0.0"))
-        .merge("todos.", todos::mount())
-        .merge("auth.", auth::mount())
-        .middleware(|mw| {
-            mw.middleware(|mw| async move {
-                let ctx = mw.ctx.clone();
-                let cookie = ctx.cookies.get("auth_session").ok_or_else(|| {
-                    rspc::Error::new(rspc::ErrorCode::BadRequest, "Not authenticated".to_string())
-                })?;
+pub const R: Rspc<Context> = Rspc::new();
 
-                let session = ctx
-                    .service
-                    .auth
-                    .validate_session(cookie.value())
-                    .await
-                    .map_err(|e| rspc::Error::new(rspc::ErrorCode::BadRequest, e.to_string()))?
-                    .ok_or_else(|| {
-                        rspc::Error::new(rspc::ErrorCode::BadRequest, "Invalid session".to_string())
-                    })?;
-
-                Ok(mw.with_ctx(ProtectedContext {
-                    service: ctx.service.clone(),
-                    cookies: ctx.cookies.clone(),
-                    user_id: session.user_id,
-                    session_token: session.token,
-                }))
-            })
-        })
-        .merge("auth.", auth::mount_protected())
-        .config(rspc::Config::new().export_ts_bindings("../web/app/generated/bindings.ts"))
+pub fn get() -> Arc<BuiltRouter<Context>> {
+    let router = R
+        .router()
+        .procedure("version", R.query(|_, _: ()| Ok("0.0.1")))
+        .merge("auth", auth::mount())
+        .merge("todos", todos::mount())
         .build()
-        .arced()
+        .unwrap()
+        .arced();
+
+    #[cfg(debug_assertions)]
+    router
+        .export_ts(ExportConfig::new(
+            PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../web/app/generated/bindings.ts"),
+        ))
+        .unwrap();
+
+    router
 }

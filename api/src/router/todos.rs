@@ -1,41 +1,52 @@
-use super::Context;
+use rspc::Router;
 
-pub fn mount() -> rspc::RouterBuilder<Context> {
-    rspc::Router::<Context>::new()
-        .query("getTodos", |t| {
-            t(|ctx: Context, _: ()| async move {
-                let todos = ctx.service.todos.get_all().await.map_err(|e| {
+use crate::{
+    core::context::{query, Context},
+    service::todos::Todos,
+};
+
+use super::R;
+
+pub fn mount() -> Router<Context> {
+    R.router()
+        .procedure(
+            "getTodos",
+            R.query(|ctx, _: ()| async move {
+                let todos = query!(ctx, Todos);
+                let todos = todos.get_all().await.map_err(|e| {
                     rspc::Error::new(rspc::ErrorCode::InternalServerError, e.to_string())
                 })?;
-
                 Ok(todos)
-            })
-        })
-        .mutation("createTodo", |t| {
-            t(|ctx: Context, title: String| async move {
-                let todo = ctx.service.todos.create(&title).await.map_err(|e| {
+            }),
+        )
+        .procedure(
+            "createTodo",
+            R.mutation(|ctx, title: String| async move {
+                let todos = query!(ctx, Todos);
+                let todo = todos.create(&title).await.map_err(|e| {
                     rspc::Error::new(rspc::ErrorCode::InternalServerError, e.to_string())
                 })?;
-
                 Ok(todo)
-            })
-        })
-        .mutation("toggleTodo", |t| {
-            t(|ctx: Context, id: i32| async move {
-                let todo = ctx.service.todos.toggle(id).await.map_err(|e| {
+            }),
+        )
+        .procedure(
+            "toggleTodo",
+            R.mutation(|ctx, id: i32| async move {
+                let todos = query!(ctx, Todos);
+                let todo = todos.toggle(id).await.map_err(|e| {
                     rspc::Error::new(rspc::ErrorCode::InternalServerError, e.to_string())
                 })?;
-
                 Ok(todo)
-            })
-        })
-        .mutation("deleteTodo", |t| {
-            t(|ctx: Context, id: i32| async move {
-                ctx.service.todos.delete(id).await.map_err(|e| {
+            }),
+        )
+        .procedure(
+            "deleteTodo",
+            R.mutation(|ctx, id: i32| async move {
+                let todos = query!(ctx, Todos);
+                todos.delete(id).await.map_err(|e| {
                     rspc::Error::new(rspc::ErrorCode::InternalServerError, e.to_string())
                 })?;
-
                 Ok(())
-            })
-        })
+            }),
+        )
 }
