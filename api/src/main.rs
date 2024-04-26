@@ -15,7 +15,6 @@ use std::{
     sync::{Arc, Mutex},
 };
 use tower_http::cors::CorsLayer;
-
 mod core;
 mod middleware;
 mod router;

@@ -51,20 +51,18 @@ async fn login(ctx: Context, args: AuthArgs) -> Result<(), Error> {
     let user = users
         .get_user_by_email(email.as_str())
         .await
-        .map_err(|e| rspc::Error::new(rspc::ErrorCode::BadRequest, e.to_string()))?
-        .ok_or_else(|| {
-            rspc::Error::new(rspc::ErrorCode::BadRequest, "User not found".to_string())
-        })?;
+        .map_err(|e| Error::new(ErrorCode::BadRequest, e.to_string()))?
+        .ok_or_else(|| Error::new(ErrorCode::BadRequest, "User not found".to_string()))?;
 
     let valid = tokio::task::spawn_blocking(move || {
         bcrypt::verify(password, &user.password).unwrap_or(false)
     })
     .await
-    .map_err(|e| rspc::Error::new(rspc::ErrorCode::InternalServerError, e.to_string()))?;
+    .map_err(|e| Error::new(ErrorCode::InternalServerError, e.to_string()))?;
 
     if !valid {
-        return Err(rspc::Error::new(
-            rspc::ErrorCode::BadRequest,
+        return Err(Error::new(
+            ErrorCode::BadRequest,
             "Invalid email or password".to_string(),
         ));
     }
@@ -72,7 +70,7 @@ async fn login(ctx: Context, args: AuthArgs) -> Result<(), Error> {
     let session = auth
         .create_session(user.id)
         .await
-        .map_err(|e| rspc::Error::new(rspc::ErrorCode::BadRequest, e.to_string()))?;
+        .map_err(|e| Error::new(ErrorCode::BadRequest, e.to_string()))?;
 
     let mut cookie = Cookie::new("auth_session", session);
 
@@ -92,23 +90,18 @@ async fn register(ctx: Context, args: AuthArgs) -> Result<(), Error> {
     let password =
         tokio::task::spawn_blocking(move || bcrypt::hash(password, bcrypt::DEFAULT_COST))
             .await
-            .map_err(|e| rspc::Error::new(rspc::ErrorCode::InternalServerError, e.to_string()))?
-            .map_err(|e| rspc::Error::new(rspc::ErrorCode::InternalServerError, e.to_string()))?;
+            .map_err(|e| Error::new(ErrorCode::InternalServerError, e.to_string()))?
+            .map_err(|e| Error::new(ErrorCode::InternalServerError, e.to_string()))?;
 
     let user = users
         .create_user(email.as_str(), password.as_str())
         .await
-        .map_err(|_| {
-            rspc::Error::new(
-                rspc::ErrorCode::BadRequest,
-                "Error creating user".to_string(),
-            )
-        })?;
+        .map_err(|_| Error::new(ErrorCode::BadRequest, "Error creating user".to_string()))?;
 
     let session = auth
         .create_session(user.id)
         .await
-        .map_err(|e| rspc::Error::new(rspc::ErrorCode::BadRequest, e.to_string()))?;
+        .map_err(|e| Error::new(ErrorCode::BadRequest, e.to_string()))?;
 
     let mut cookie = Cookie::new("auth_session", session);
 
@@ -126,7 +119,7 @@ async fn logout(ctx: Context, _: ()) -> Result<(), Error> {
 
     auth.invalidate_session(&session.token)
         .await
-        .map_err(|e| rspc::Error::new(rspc::ErrorCode::BadRequest, e.to_string()))?;
+        .map_err(|e| Error::new(ErrorCode::BadRequest, e.to_string()))?;
 
     let mut cookie = Cookie::new("auth_session", "");
 
