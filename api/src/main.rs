@@ -47,16 +47,18 @@ async fn main() -> Result<(), Box<dyn Error>> {
         .allow_headers([AUTHORIZATION, CONTENT_TYPE])
         .allow_credentials(true);
 
+    let mut ctx = Context::new();
+
+    context::add!(ctx, auth);
+    context::add!(ctx, users);
+    context::add!(ctx, todos);
+
     let app = Router::new()
         .nest(
             "/",
             router
                 .endpoint(|req: Request| {
-                    let mut ctx = Context::new();
                     context::add!(ctx, Mutex::new(req));
-                    context::add!(ctx, auth);
-                    context::add!(ctx, users);
-                    context::add!(ctx, todos);
                     ctx
                 })
                 .axum(),

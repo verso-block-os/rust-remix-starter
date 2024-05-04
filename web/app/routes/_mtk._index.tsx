@@ -1,18 +1,21 @@
 import { Plus, X } from "lucide-react";
 import { useReducer, useState } from "react";
 
-import { ModeToggle } from "@/components/mode-toggle";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
+import type { MetaFunction } from "@remix-run/node";
+import { ModeToggle } from "@/components/mode-toggle";
+import { RiLogoutBoxLine } from "react-icons/ri";
 import { Todo } from "@/generated/bindings";
 import { api } from "@/lib/api";
-import type { MetaFunction } from "@remix-run/node";
 import { useLoaderData } from "@remix-run/react";
-import { RiLogoutBoxLine } from "react-icons/ri";
 
 export const meta: MetaFunction = () => {
-  return [{ title: "Rust Remix Starter" }, { name: "description", content: "Welcome to Rust Remix Starter!" }];
+  return [
+    { title: "Rust Remix Starter" },
+    { name: "description", content: "Welcome to Rust Remix Starter!" },
+  ];
 };
 
 export const loader = async () => {
@@ -24,7 +27,10 @@ export const loader = async () => {
   };
 };
 
-type Action = { type: "add"; payload: Todo } | { type: "remove"; payload: number } | { type: "toggle"; payload: number };
+type Action =
+  | { type: "add"; payload: Todo }
+  | { type: "remove"; payload: number }
+  | { type: "toggle"; payload: number };
 
 export default function Index() {
   const data = useLoaderData<typeof loader>();
@@ -68,9 +74,16 @@ export default function Index() {
   return (
     <div className="flex-1 flex justify-center items-center relative">
       <div className="flex flex-col gap-4">
-        <h1 className="text-xl font-bold">Welcome to Rust Remix Starter {data.version}</h1>
+        <h1 className="text-xl font-bold">
+          Welcome to Rust Remix Starter {data.version}
+        </h1>
         <div className="flex gap-4">
-          <Input type="text" placeholder="Add a todo" onChange={(e) => setInput(e.target.value)} value={input} />
+          <Input
+            type="text"
+            placeholder="Add a todo"
+            onChange={(e) => setInput(e.target.value)}
+            value={input}
+          />
           <div className="flex gap-4">
             <Button onClick={createTodo} size="icon">
               <Plus />
@@ -79,12 +92,24 @@ export default function Index() {
           </div>
         </div>
         {todos.map((todo) => (
-          <div key={todo.id} className="flex items-center justify-between gap-4 p-4 bg-muted rounded-sm">
+          <div
+            key={todo.id}
+            className="flex items-center justify-between gap-4 p-4 bg-muted rounded-sm"
+          >
             <div className="flex items-center gap-4">
-              <Checkbox checked={todo.completed} onClick={() => toggleTodo(todo.id)} />
-              <span className={todo.completed ? "line-through" : ""}>{todo.title}</span>
+              <Checkbox
+                checked={todo.completed}
+                onClick={() => toggleTodo(todo.id)}
+              />
+              <span className={todo.completed ? "line-through" : ""}>
+                {todo.title}
+              </span>
             </div>
-            <Button onClick={() => deleteTodo(todo.id)} variant="ghost" size="icon">
+            <Button
+              onClick={() => deleteTodo(todo.id)}
+              variant="ghost"
+              size="icon"
+            >
               <X />
             </Button>
           </div>
